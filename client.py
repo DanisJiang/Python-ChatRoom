@@ -1,5 +1,5 @@
 # -*- coding:UTF-8 -*-
-# AUTHOR: Mki
+# AUTHOR: youzhiyuan
 
 # DESCRIPTION:  聊天室客户端
 import threading
@@ -7,26 +7,96 @@ from socket import socket, AF_INET, SOCK_DGRAM
 import json
 import os
 import sys
+from PySide2 import QtCore, QtWidgets, QtGui
 
-class Client():
+class RecvThread(QtCore.QThread):
+    signal = QtCore.Signal(object)
+
+    def __init__(self, sock):
+        super().__init__()
+        self.sock = sock
+
+    def run(self):
+        while True:
+            msg, addr = self.sock.recvfrom(8192)
+            msg = str(msg, encoding="utf-8")
+            self.signal.emit(msg)
+
+
+class LoginWindow(QtWidgets.QDialog):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("login")
+        self.resize(280, 230)
+        self.setWindowFlag(QtCore.Qt.WindowStaysOnTopHint,QtCore.Qt.ApplicationModal)
+
+        self.layout = QtWidgets.QVBoxLayout()
+        self.label1 = QtWidgets.QLabel("username")
+        self.username = QtWidgets.QLineEdit()
+        self.username.setPlaceholderText("Enter Username Here")
+        self.username.move(20, 20)
+        self.label2 = QtWidgets.QLabel("password")
+        self.passwd = QtWidgets.QLineEdit()
+        self.passwd.setPlaceholderText("Enter Password Here")
+        self.passwd.setEchoMode(QtWidgets.QLineEdit.Password)
+        self.passwd.move(20, 20)
+        self.button = QtWidgets.QPushButton("login")
+        self.button.clicked.connect(self.login)
+        self.layout.addWidget(self.label1)
+        self.layout.addWidget(self.username)
+        self.layout.addWidget(self.label2)
+        self.layout.addWidget(self.passwd)
+        self.layout.addWidget(self.button)
+        self.setLayout(self.layout)
+        self.show()
+        app.exec_()
+
+    def login(self):
+        loginStatus = QtWidgets.QMessageBox()
+        loginStatus.setText("login success")
+        loginStatus.exec_()
+        self.close()
+
+
+
+
+class Client(QtWidgets.QWidget):
     def __init__(self,localAddr,serverAddr):
         '''
         初始化
         '''
+        super().__init__()
+        # QtWidgets.QMainWindow.__init__(self)
+        self.setWindowTitle("Python-ChatRoom")
+        self.resize(800, 600)
+        self.layout = QtWidgets.QVBoxLayout()
+        self.mainEdit = QtWidgets.QTextEdit()
+        self.inputEdit = QtWidgets.QTextEdit()
+        self.sendButton = QtWidgets.QPushButton("send")
+        self.layout.addWidget(self.mainEdit)
+        self.layout.addWidget(self.inputEdit)
+        self.layout.addWidget(self.sendButton)
+        self.setLayout(self.layout)
+
         self.addr = localAddr
         self.serverAddr = serverAddr
         self.sock = socket(AF_INET, SOCK_DGRAM)
         self.sock.bind(localAddr)
         self.auth = {}
         self.queue = []
+        self.loginWindow = LoginWindow()
+        # self.loginWindow.show()
+
+
+        # login.close()
         self.start()
 
     def login(self):
         '''
         用户登陆
         '''
-        name = str(input("username: "))
-        pwd = str(input("password: "))
+        name = self.loginWindow.username.text()
+        pwd = self.loginWindow.passwd.text()
         self.auth = {
             "name": name,
             "pwd": pwd
@@ -39,30 +109,27 @@ class Client():
         msg = bytes(msg, encoding='utf-8')
         self.sock.sendto(msg, self.serverAddr)
 
-    def recieve(self,addr):
+        self.setWindowFlag(QtCore.Qt.WindowStaysOnTopHint)
+        self.show()
+
+    def recieve(self, msg):
         '''
         接收消息
         '''
-        while True:
-            msg, addr = self.sock.recvfrom(8192)
-            msg = str(msg,encoding="utf-8")
-            self.queue.append(msg)
-            self.chatWindow()
+        self.queue.append(msg)
+        self.chatWindow()
 
     def chatWindow(self):
         '''
         聊天界面
         '''
-        os.system('clear')
-        print("################# ChatRoom #################")
+        self.mainEdit.clear()
         if len(self.queue)>=6:
             for msg in self.queue[-6:]:
-                print(f'{msg} \n')
+                self.mainEdit.append(f'{msg} \n')
         else:
             for msg in self.queue:
-                print(f'{msg} \n')
-        print("################# ChatRoom ################")
-        print("mode b:(broadcast) s:(solo) l:(list all users)")
+                self.mainEdit.append(f'{msg} \n')
 
 
     def pack(self):
@@ -71,35 +138,42 @@ class Client():
         '''
         msg = {}
         msg["auth"] = self.auth
-        mode = input("mode b:(broadcast) s:(solo) l:(list all users) e:(exit)\n")
-        if mode == "s":
-            msg["type"] = "solo"
-            msg["toWho"] = str(input("to: "))
-            msg["text"] = str(input(": "))
-        elif mode == "b":
-            msg["type"] = "broadcast"
-            msg["text"] = str(input(":"))
-        elif mode == "l":
-            msg["type"] = "show"
-        elif mode == "e":
-            sys.exit()
-        else:
-            msg["type"] = ""
-            print("Wrong order, please input b:(broadcast) s:(solo) l:(list all users) e:(exit")
+        modes = ["broadcast", "solo", "list all users"]
+        mode, ok = QtWidgets.QInputDialog().getItem(self, "mode", "mode: ", modes, 0, False)
+        if ok:
+            if mode == "solo":
+                msg["type"] = "solo"
+                who, ok = QtWidgets.QInputDialog().getText(self, "to who", "to: ", QtWidgets.QLineEdit.Normal, None)
+                if ok:
+                    msg["toWho"] = who
+                else:
+                    msg["type"] = ""
+                msg["text"] = self.inputEdit.toPlainText()
+            elif mode == "broadcast":
+                msg["type"] = "broadcast"
+                msg["text"] = self.inputEdit.toPlainText()
+            elif mode == "list all users":
+                msg["type"] = "show"
         msg = json.dumps(msg)
         msg = bytes(msg, encoding='utf-8')
+        self.inputEdit.clear()
         return msg
-  
+
+    def send(self):
+        msg = self.pack()
+        self.sock.sendto(msg, self.serverAddr)
 
     def start(self):
-        t = threading.Thread(target=self.recieve,args=(self.addr,))
-        t.setDaemon(True)
-        t.start()
+        # t = threading.Thread(target=self.recieve,args=(self.addr,))
+        # t.setDaemon(True)
+        # t.start()
+        self.recvThread = RecvThread(self.sock)
+        self.recvThread.signal.connect(self.recieve)
+        self.recvThread.start()
 
         self.login()
-        while True:
-            msg = self.pack()
-            self.sock.sendto(msg, self.serverAddr)
+        self.sendButton.clicked.connect(self.send)
+
 
 
 if __name__ == "__main__":
@@ -111,7 +185,9 @@ if __name__ == "__main__":
     romotePort = sys.argv[4]
     romoteAddr = (romoteHost,int(romotePort))
     
-    Client(localAddr,romoteAddr)
+    app = QtWidgets.QApplication([]) 
+    window = Client(localAddr,romoteAddr)
+    sys.exit(app.exec_())
 
 
 
