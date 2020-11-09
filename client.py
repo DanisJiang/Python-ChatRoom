@@ -68,6 +68,7 @@ class Client(QtWidgets.QWidget):
         self.resize(800, 600)
         self.layout = QtWidgets.QVBoxLayout()
         self.mainEdit = QtWidgets.QTextEdit()
+        self.mainEdit.setFocusPolicy(QtCore.Qt.NoFocus)
         self.inputEdit = QtWidgets.QTextEdit()
         self.sendButton = QtWidgets.QPushButton("send")
         self.layout.addWidget(self.mainEdit)

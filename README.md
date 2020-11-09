@@ -1,7 +1,16 @@
 # QT-Python-ChatRoom
 * 一个简单的Python-GUI聊天室
-
 * 使用Python pyside2库
+* 基于UDP协议，实现以下功能
+  * 用户注册
+  * 用户登录
+  * 公聊
+  * 私聊
+* HDU Python网络编程课程设计 实验二
+
+软件截图
+
+![Snipaste_2020-11-09_11-21-18](/home/abc/Python-ChatRoom/images/Snipaste_2020-11-09_11-21-18.png)
 
 ## Usage
 
