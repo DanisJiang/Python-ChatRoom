@@ -10,7 +10,7 @@
 
 软件截图
 
-![Snipaste_2020-11-09_11-21-18](/home/abc/Python-ChatRoom/images/Snipaste_2020-11-09_11-21-18.png)
+![Snipaste_2020-11-09_11-21-18](./images/Snipaste_2020-11-09_11-21-18.png)
 
 ## Usage
 
