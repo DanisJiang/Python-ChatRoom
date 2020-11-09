@@ -40,12 +40,24 @@ class LoginWindow(QtWidgets.QDialog):
         self.passwd.setPlaceholderText("Enter Password Here")
         self.passwd.setEchoMode(QtWidgets.QLineEdit.Password)
         self.passwd.move(20, 20)
+        self.label3 = QtWidgets.QLabel("Server IP")
+        self.serverip = QtWidgets.QLineEdit()
+        self.serverip.setPlaceholderText("Enter Server IP Here")
+        self.serverip.move(20,20)
+        self.label4 = QtWidgets.QLabel("Server Port")
+        self.serverport = QtWidgets.QLineEdit()
+        self.serverport.setPlaceholderText("Enter Server Port Here")
+        self.serverport.move(20, 20)
         self.button = QtWidgets.QPushButton("login")
         self.button.clicked.connect(self.login)
         self.layout.addWidget(self.label1)
         self.layout.addWidget(self.username)
         self.layout.addWidget(self.label2)
         self.layout.addWidget(self.passwd)
+        self.layout.addWidget(self.label3)
+        self.layout.addWidget(self.serverip)
+        self.layout.addWidget(self.label4)
+        self.layout.addWidget(self.serverport)
         self.layout.addWidget(self.button)
         self.setLayout(self.layout)
         self.show()
@@ -58,7 +70,7 @@ class LoginWindow(QtWidgets.QDialog):
 
 
 class Client(QtWidgets.QWidget):
-    def __init__(self,localAddr,serverAddr):
+    def __init__(self):
         '''
         初始化
         '''
@@ -76,10 +88,10 @@ class Client(QtWidgets.QWidget):
         self.layout.addWidget(self.sendButton)
         self.setLayout(self.layout)
 
-        self.addr = localAddr
-        self.serverAddr = serverAddr
+        # self.addr = localAddr
+        # self.serverAddr = serverAddr
         self.sock = socket(AF_INET, SOCK_DGRAM)
-        self.sock.bind(localAddr)
+        self.sock.bind(('', 0))
         self.auth = {}
         self.queue = []
         self.loginWindow = LoginWindow()
@@ -96,6 +108,10 @@ class Client(QtWidgets.QWidget):
         name = self.loginWindow.username.text()
         self.setWindowTitle(name + " - Python-ChatRoom")
         pwd = self.loginWindow.passwd.text()
+        romoteHost = self.loginWindow.serverip.text()
+        romotePort = self.loginWindow.serverport.text()
+        self.serverAddr = (romoteHost, int(romotePort))
+
         self.auth = {
             "name": name,
             "pwd": pwd
@@ -197,16 +213,8 @@ class Client(QtWidgets.QWidget):
 
 
 if __name__ == "__main__":
-    localHost = sys.argv[1]
-    localPort = int(sys.argv[2])
-    localAddr = (localHost,int(localPort))
-
-    romoteHost = sys.argv[3]
-    romotePort = sys.argv[4]
-    romoteAddr = (romoteHost,int(romotePort))
-    
-    app = QtWidgets.QApplication([]) 
-    window = Client(localAddr,romoteAddr)
+    app = QtWidgets.QApplication([])
+    window = Client()
     sys.exit(app.exec_())
 
 
